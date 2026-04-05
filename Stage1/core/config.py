@@ -6,6 +6,12 @@ from typing import Any, Dict, List, Optional
 
 
 def default_hyperparameter_spaces() -> Dict[str, Dict[str, Any]]:
+    """Hyperparameter spaces for the Overall scenario (Overall.ipynb)."""
+    return overall_hyperparameter_spaces()
+
+
+def overall_hyperparameter_spaces() -> Dict[str, Dict[str, Any]]:
+    """Hyperparameter spaces for the Overall scenario (Overall.ipynb)."""
     try:
         from skopt.space import Integer, Real
     except Exception:
@@ -33,6 +39,72 @@ def default_hyperparameter_spaces() -> Dict[str, Dict[str, Any]]:
             "reg_alpha": Real(1e-5, 1e-3, "log-uniform"),
             "reg_lambda": Real(5.0, 15.0, "log-uniform"),
             "min_child_samples": Integer(10, 25),
+        },
+    }
+
+
+def single_factor_hyperparameter_spaces() -> Dict[str, Dict[str, Any]]:
+    """Hyperparameter spaces for the single-factor subgroup scenario (s1.ipynb)."""
+    try:
+        from skopt.space import Integer, Real
+    except Exception:
+        return {}
+
+    return {
+        "XGBoost": {
+            "n_estimators": Integer(850, 1100),
+            "max_depth": Integer(2, 4),
+            "learning_rate": Real(0.025, 0.09, "log-uniform"),
+            "subsample": Real(0.85, 1.0, "uniform"),
+            "colsample_bytree": Real(0.7, 0.9, "uniform"),
+            "gamma": Real(0.0, 0.2, "uniform"),
+            "reg_alpha": Real(1e-5, 0.5, "log-uniform"),
+            "reg_lambda": Real(1e-6, 0.5, "log-uniform"),
+            "min_child_weight": Integer(4, 10),
+        },
+        "LightGBM": {
+            "n_estimators": Integer(750, 1200),
+            "max_depth": Integer(2, 4),
+            "num_leaves": Integer(100, 250),
+            "learning_rate": Real(0.008, 0.1, "log-uniform"),
+            "subsample": Real(0.75, 1.0, "uniform"),
+            "colsample_bytree": Real(0.45, 0.75, "uniform"),
+            "reg_alpha": Real(1e-5, 0.05, "log-uniform"),
+            "reg_lambda": Real(5.0, 25.0, "uniform"),
+            "min_child_samples": Integer(3, 15),
+        },
+    }
+
+
+def age_gender_hyperparameter_spaces() -> Dict[str, Dict[str, Any]]:
+    """Hyperparameter spaces for the age-and-gender subgroup scenario (s2.ipynb)."""
+    try:
+        from skopt.space import Integer, Real
+    except Exception:
+        return {}
+
+    return {
+        "XGBoost": {
+            "n_estimators": Integer(900, 1200),
+            "max_depth": Integer(2, 4),
+            "learning_rate": Real(0.03, 0.2, "log-uniform"),
+            "subsample": Real(0.6, 1.0, "uniform"),
+            "colsample_bytree": Real(0.75, 0.95, "uniform"),
+            "gamma": Real(0.0, 1.0, "uniform"),
+            "reg_alpha": Real(1e-4, 1.0, "log-uniform"),
+            "reg_lambda": Real(1e-5, 1e-1, "log-uniform"),
+            "min_child_weight": Integer(5, 12),
+        },
+        "LightGBM": {
+            "n_estimators": Integer(800, 1500),
+            "max_depth": Integer(2, 4),
+            "num_leaves": Integer(50, 200),
+            "learning_rate": Real(0.005, 0.2, "log-uniform"),
+            "subsample": Real(0.6, 1.0, "uniform"),
+            "colsample_bytree": Real(0.5, 0.85, "uniform"),
+            "reg_alpha": Real(1e-5, 1e-2, "log-uniform"),
+            "reg_lambda": Real(1.0, 20.0, "log-uniform"),
+            "min_child_samples": Integer(5, 30),
         },
     }
 
@@ -120,6 +192,7 @@ class ScenarioConfig:
     bayesian_n_iter: int = 30
     analysis_groups: Dict[str, GroupFilter] = field(default_factory=dict)
     models: List[str] = field(default_factory=lambda: ["XGBoost", "LightGBM"])
+    weight_scale_factor: float = 0.5
     keep_legacy_outputs: bool = True
 
     def prepare_output_dir(self) -> Path:
@@ -141,7 +214,7 @@ class RunResult:
     cv_results: Any
     test_results: Any
     comparison: Any
-    summary: Any
+    summary: AnyOver
     stability_results: Dict[str, Any]
     extra: Dict[str, Any] = field(default_factory=dict)
 

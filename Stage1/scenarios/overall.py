@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from core.config import ScenarioConfig
+from core.config import ScenarioConfig, overall_hyperparameter_spaces
 from core.pipeline import run_overall
 
 
@@ -11,10 +11,11 @@ def build_config(base_dir: Path | None = None) -> ScenarioConfig:
     return ScenarioConfig(
         name="overall",
         data_path=base / "cleaned_data.csv",
-        output_dir=base / "Overall_after_impute",
+        output_dir=base / "Global_teeth_selection",
         gender_column=None,
         top_features_count=10,
         min_samples_per_group=0,
+        bayesian_hyperparameter_spaces=overall_hyperparameter_spaces(),
     )
 
 

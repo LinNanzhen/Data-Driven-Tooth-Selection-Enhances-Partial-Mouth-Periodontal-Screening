@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from core.config import GroupFilter, ScenarioConfig
+from core.config import GroupFilter, ScenarioConfig, single_factor_hyperparameter_spaces
 from core.pipeline import run_subgroup
 
 
@@ -14,6 +14,7 @@ def build_config(base_dir: Path | None = None) -> ScenarioConfig:
         output_dir=base / "Gender_or_age_analysis",
         top_features_count=10,
         min_samples_per_group=100,
+        bayesian_hyperparameter_spaces=single_factor_hyperparameter_spaces(),
     )
 
 

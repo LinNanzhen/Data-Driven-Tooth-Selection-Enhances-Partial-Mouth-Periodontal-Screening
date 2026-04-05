@@ -56,6 +56,8 @@ class DataProcessor:
 
         df = self._identify_periodontal_features(df)
         df = self._handle_missing_values(df)
+        if self.config.weight_column in df.columns:
+            df[self.config.weight_column] = df[self.config.weight_column] * self.config.weight_scale_factor
         df = self._apply_cdc_classification(df)
         print("Data preprocessing complete")
         return df
