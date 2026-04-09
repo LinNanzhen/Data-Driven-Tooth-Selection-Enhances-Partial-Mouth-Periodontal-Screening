@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import gc
 from collections import defaultdict
@@ -99,6 +99,19 @@ class ModelPipeline:
         )
 
         feature_sets = {"Combined": x}
+
+        if "tooth_level_importance" in stability_results:
+            consensus_features = self._create_consensus_feature_sets(
+                x, stability_results, model_name
+            )
+            if (
+                "SHAP_Consensus" in consensus_features
+                and not consensus_features["SHAP_Consensus"].empty
+            ):
+                feature_sets["SHAP_Consensus_{0}".format(model_name)] = consensus_features[
+                    "SHAP_Consensus"
+                ]
+
         roc_data = {}
         for fs_name, x_fs in feature_sets.items():
             if x_fs.empty:
@@ -138,7 +151,7 @@ class ModelPipeline:
         return all_results, stability_results
 
     def _plot_train_roc_curves(self, roc_data, model_name, output_dir):
-        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig, axes = plt.subplots(1, 3, figsize=(36, 12))
         axes = axes.flatten()
 
         for idx, (_, class_label) in enumerate(self.config.class_labels.items()):
@@ -336,7 +349,7 @@ class ModelPipeline:
 
     def _plot_test_roc_curves(self, test_roc_data, model_name, output_dir):
         group_name = output_dir.name
-        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig, axes = plt.subplots(1, 3, figsize=(36, 12))
         axes = axes.flatten()
 
         for idx, (_, class_label) in enumerate(self.config.class_labels.items()):
