@@ -100,6 +100,33 @@ class SurveyWeightVariantTests(unittest.TestCase):
                 pd.Series([1.0, 2.0], index=[10, 10])
             )
 
+    def test_all_variant_model_fits_exclude_class_balancing(self):
+        expected_survey_weight_names = {
+            "core/hyperopt.py": "sample_weight",
+            "core/evaluation.py": "w_train",
+            "core/stability.py": "sw_train_sub",
+        }
+
+        for relative_path, survey_weight_name in expected_survey_weight_names.items():
+            with self.subTest(relative_path=relative_path):
+                module = parse_variant_module(relative_path)
+                names = {
+                    node.id
+                    for node in ast.walk(module)
+                    if isinstance(node, ast.Name)
+                }
+                called_attributes = {
+                    node.func.attr
+                    for node in ast.walk(module)
+                    if isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                }
+
+                self.assertNotIn("compute_sample_weight", imported_names(module))
+                self.assertNotIn("compute_sample_weight", names)
+                self.assertIn("fit", called_attributes)
+                self.assertIn(survey_weight_name, names)
+
 
 if __name__ == "__main__":
     unittest.main()

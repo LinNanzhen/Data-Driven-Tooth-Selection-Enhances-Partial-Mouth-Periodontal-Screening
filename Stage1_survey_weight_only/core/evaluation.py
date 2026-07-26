@@ -9,7 +9,6 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, auc, cohen_kappa_score, f1_score, roc_auc_score, roc_curve
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import label_binarize
-from sklearn.utils.class_weight import compute_sample_weight
 
 from core.config import ScenarioConfig
 from core.hyperopt import SKOPT_AVAILABLE, HyperparameterTuner
@@ -250,12 +249,9 @@ class ModelPipeline:
                 model = create_model(model_name, random_state=seed)
                 model.set_params(**best_params)
 
-                class_sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
-                fit_params = {
-                    "sample_weight": w_train * class_sample_weights
-                    if w_train is not None
-                    else class_sample_weights
-                }
+                fit_params = {}
+                if w_train is not None:
+                    fit_params["sample_weight"] = w_train
                 model.fit(x_train, y_train, **fit_params)
 
                 y_score = model.predict_proba(x_val)

@@ -10,7 +10,6 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
-from sklearn.utils.class_weight import compute_sample_weight
 
 from core.config import ScenarioConfig
 from core.model_factory import create_model
@@ -68,13 +67,9 @@ class MultiSeedStabilityAnalyzer:
                 model = create_model(model_name, random_state=seed)
                 model.set_params(**best_params)
 
-                class_sample_weights = compute_sample_weight("balanced", y=y_train_sub)
-                fit_sample_weight = (
-                    sw_train_sub.values * class_sample_weights
-                    if sw_train_sub is not None
-                    else class_sample_weights
-                )
-                fit_params = {"sample_weight": fit_sample_weight}
+                fit_params = {}
+                if sw_train_sub is not None:
+                    fit_params["sample_weight"] = sw_train_sub
 
                 if hasattr(model, "set_params"):
                     try:
@@ -85,11 +80,14 @@ class MultiSeedStabilityAnalyzer:
                 with contextlib.redirect_stdout(io.StringIO()):
                     model.fit(x_train_sub, y_train_sub, **fit_params)
 
-                bg_weights = sw_train_sub.values if sw_train_sub is not None else np.ones(len(x_train_sub))
-                bg_combined_weights = bg_weights * class_sample_weights
+                bg_weights = (
+                    sw_train_sub.to_numpy()
+                    if sw_train_sub is not None
+                    else np.ones(len(x_train_sub))
+                )
                 x_sample, x_sample_weights = self._weighted_sample(
                     x_train_sub,
-                    bg_combined_weights,
+                    bg_weights,
                     self.config.shap_sample_size,
                     random_state=seed + fold_idx,
                 )
@@ -215,4 +213,3 @@ class MultiSeedStabilityAnalyzer:
             "feature_level_stability": feature_df,
             "detailed_importance": detailed_importance_df,
         }
-
