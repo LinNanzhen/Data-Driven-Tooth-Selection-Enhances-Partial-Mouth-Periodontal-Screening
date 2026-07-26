@@ -37,9 +37,12 @@ def imported_names(module):
 
 
 class SurveyWeightVariantTests(unittest.TestCase):
-    def test_variant_exists_with_same_initial_file_set(self):
+    def test_variant_contains_every_original_stage1_file(self):
         self.assertTrue(VARIANT.is_dir())
-        self.assertEqual(set(source_digest(ORIGINAL)), set(source_digest(VARIANT)))
+        self.assertLessEqual(
+            set(source_digest(ORIGINAL)),
+            set(source_digest(VARIANT)),
+        )
 
     def test_tuner_defines_weighted_scorer_without_class_weight_code(self):
         module = parse_variant_module("core/hyperopt.py")
@@ -126,6 +129,55 @@ class SurveyWeightVariantTests(unittest.TestCase):
                 self.assertNotIn("compute_sample_weight", names)
                 self.assertIn("fit", called_attributes)
                 self.assertIn(survey_weight_name, names)
+
+    def test_unmodified_variant_files_still_match_original_stage1(self):
+        intentionally_changed = {
+            "core/hyperopt.py",
+            "core/evaluation.py",
+            "core/stability.py",
+        }
+        original_digest = source_digest(ORIGINAL)
+        variant_digest = source_digest(VARIANT)
+
+        for relative_path, digest in original_digest.items():
+            if relative_path in intentionally_changed:
+                continue
+            with self.subTest(relative_path=relative_path):
+                self.assertEqual(variant_digest[relative_path], digest)
+
+    def test_variant_readme_documents_holdout_boundary(self):
+        readme_path = VARIANT / "README.md"
+        self.assertTrue(readme_path.exists())
+        content = readme_path.read_text(encoding="utf-8").lower()
+
+        self.assertIn("survey weights only", content)
+        self.assertIn("stage2 hold-out", content)
+        self.assertIn("do not compare variants on the hold-out", content)
+
+    def test_variant_retains_holdout_export_without_model_test_api(self):
+        evaluation_module = parse_variant_module("core/evaluation.py")
+        pipeline_module = parse_variant_module("core/pipeline.py")
+
+        model_pipeline = next(
+            node
+            for node in evaluation_module.body
+            if isinstance(node, ast.ClassDef) and node.name == "ModelPipeline"
+        )
+        method_names = {
+            node.name
+            for node in model_pipeline.body
+            if isinstance(node, ast.FunctionDef)
+        }
+        save_holdout_calls = [
+            node
+            for node in ast.walk(pipeline_module)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_save_test_set"
+        ]
+
+        self.assertNotIn("evaluate_test_set", method_names)
+        self.assertGreaterEqual(len(save_holdout_calls), 2)
 
 
 if __name__ == "__main__":
