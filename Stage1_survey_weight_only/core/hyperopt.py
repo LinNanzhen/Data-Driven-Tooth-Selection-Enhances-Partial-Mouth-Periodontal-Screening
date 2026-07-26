@@ -3,8 +3,10 @@
 import gc
 from typing import Dict, Tuple
 
+import numpy as np
+import pandas as pd
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
-from sklearn.utils.class_weight import compute_sample_weight
 
 try:
     from skopt import BayesSearchCV
@@ -13,6 +15,39 @@ try:
 except Exception:
     SKOPT_AVAILABLE = False
     BayesSearchCV = None
+
+
+class SurveyWeightedOvRMacroAUC:
+    def __init__(self, sample_weight: pd.Series):
+        if not isinstance(sample_weight, pd.Series):
+            raise TypeError("sample_weight must be a pandas Series")
+        if not sample_weight.index.is_unique:
+            raise ValueError("sample_weight index must be unique")
+        if sample_weight.isna().any() or not np.isfinite(sample_weight.to_numpy()).all():
+            raise ValueError("sample_weight must contain only finite values")
+        if (sample_weight < 0).any():
+            raise ValueError("sample_weight must be non-negative")
+        self.sample_weight = sample_weight.copy()
+
+    def __call__(self, estimator, X, y):
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("weighted scoring requires X to be a pandas DataFrame")
+        if not X.index.is_unique:
+            raise ValueError("validation index must be unique")
+        missing = X.index.difference(self.sample_weight.index)
+        if not missing.empty:
+            raise ValueError("validation rows are missing survey weights")
+
+        validation_weight = self.sample_weight.loc[X.index].to_numpy()
+        probabilities = estimator.predict_proba(X)
+        return roc_auc_score(
+            y,
+            probabilities,
+            labels=estimator.classes_,
+            multi_class="ovr",
+            average="macro",
+            sample_weight=validation_weight,
+        )
 
 
 class HyperparameterTuner:
@@ -37,23 +72,26 @@ class HyperparameterTuner:
         cv = StratifiedKFold(
             n_splits=self.cv_folds, shuffle=True, random_state=self.random_state
         )
+        search_scoring = (
+            SurveyWeightedOvRMacroAUC(sample_weight)
+            if sample_weight is not None
+            else scoring
+        )
+        base_model.set_params(n_jobs=1)
         bayes_search = BayesSearchCV(
             base_model,
             param_space,
             n_iter=self.n_iter,
             cv=cv,
-            scoring=scoring,
+            scoring=search_scoring,
             n_jobs=-1,
             random_state=self.random_state,
             verbose=0,
         )
 
-        class_sample_weights = compute_sample_weight(class_weight="balanced", y=y)
-        fit_params = {
-            "sample_weight": sample_weight * class_sample_weights
-            if sample_weight is not None
-            else class_sample_weights
-        }
+        fit_params = {}
+        if sample_weight is not None:
+            fit_params["sample_weight"] = sample_weight
 
         bayes_search.fit(X, y, **fit_params)
         tuned_model = base_model.set_params(**bayes_search.best_params_)
