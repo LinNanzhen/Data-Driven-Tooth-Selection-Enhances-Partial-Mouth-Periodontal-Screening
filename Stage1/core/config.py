@@ -203,8 +203,6 @@ class ScenarioConfig:
 @dataclass
 class OutputSpec:
     metrics_cv: str = "metrics_cv.csv"
-    metrics_test: str = "metrics_test.csv"
-    comparison_cv_test: str = "comparison_cv_test.csv"
     summary_final: str = "summary_final.csv"
     legacy_map: Dict[str, str] = field(default_factory=dict)
 
@@ -212,9 +210,7 @@ class OutputSpec:
 @dataclass
 class RunResult:
     cv_results: Any
-    test_results: Any
-    comparison: Any
-    summary: AnyOver
+    summary: Any
     stability_results: Dict[str, Any]
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -223,16 +219,12 @@ def make_output_spec(mode: str) -> OutputSpec:
     if mode == "overall":
         legacy = {
             "metrics_cv.csv": "cross_validation_results.csv",
-            "metrics_test.csv": "final_test_results.csv",
-            "comparison_cv_test.csv": "cv_vs_test_comparison.csv",
             "summary_final.csv": "final_consolidated_summary.csv",
         }
         return OutputSpec(legacy_map=legacy)
 
     legacy = {
         "metrics_cv.csv": "all_subgroups_cv_results.csv",
-        "metrics_test.csv": "all_subgroups_test_results.csv",
-        "comparison_cv_test.csv": "cv_vs_test_comparison_by_subgroup.csv",
         "summary_final.csv": "final_consolidated_summary.csv",
     }
     return OutputSpec(legacy_map=legacy)

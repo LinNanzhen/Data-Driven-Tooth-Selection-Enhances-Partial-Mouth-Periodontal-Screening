@@ -53,13 +53,13 @@ This repository implements a two-stage (discovery and evaluation) pipeline for o
 2. **Bayesian hyperparameter optimisation** -- tune XGBoost and LightGBM with `scikit-optimize` over scenario-specific search spaces.
 3. **Multi-seed SHAP extraction** -- train each model across multiple random seeds, compute SHAP values, aggregate site-level importance into tooth-level rankings.
 4. **Consensus tooth ranking** -- derive a stable top-10 tooth set from the multi-seed results.
-5. **Stratified CV + hold-out evaluation** -- report CV and test-set ML metrics (primary reported results come from Stage 2).
+5. **Stratified CV + reserved hold-out export** -- report development-set CV metrics and export the untouched hold-out rows for Stage 2 rule-based evaluation.
 
 ### Key Outputs
 
 - Consensus tooth lists per model and subgroup
 - SHAP importance rankings
-- CV and test-set metrics (accuracy, weighted F1, QWK)
+- Development-set CV metrics (macro-AUC, accuracy, weighted F1, QWK)
 
 ## Stage 2 -- CDC/AAP Rule-Based Evaluation
 
@@ -92,7 +92,8 @@ This project uses public NHANES (National Health and Nutrition Examination Surve
 
 1. Download oral health examination data (OHX periodontal) and demographics from [NHANES](https://wwwn.cdc.gov/nchs/nhanes/).
 2. Stage 1 expects `Stage1/cleaned_data.csv`; Stage 2 expects `Stage2/test_data.csv`.
-3. Execute the subgroup code in Stage1 to obtain the required data for the internal test set
+3. Execute Stage 1 to select teeth and export the reserved hold-out rows required by Stage 2.
+
 ## Usage
 
 ```bash
@@ -121,9 +122,9 @@ The consensus teeth are selected by ranking individual tooth-level SHAP values a
 
 Stage 1 optimises macro-AUC (via Bayesian hyperparameter search), while Stage 2 evaluates with quadratic weighted kappa (QWK) and inflation factor (IF). The SHAP-ranked teeth are therefore a heuristic solution rather than a guaranteed optimum under CDC/AAP metrics. AUC optimisation was chosen because it yields stable, well-calibrated probability estimates that facilitate interpretable SHAP attribution, while QWK/IF are better suited for measuring partial-mouth vs. full-mouth agreement.
 
-### 3. Internal test-set reuse
+### 3. Internal hold-out role
 
-The 20% hold-out split from NHANES 2009--2012 is used to report both ML predictive metrics (Stage 1) and CDC-rule metrics (Stage 2). Because the SHAP consensus teeth were derived from the full 2009--2012 cohort via repeated cross-validation, internal test-set performance should be interpreted as a consistency check, not a fully independent validation. The primary generalisation evidence in the manuscript comes from the external temporal validation on NHANES 2013--2014.
+The 20% hold-out split from NHANES 2009--2012 is reserved before Stage 1 model fitting. Stage 1 does not report model performance on these rows; Stage 2 uses them only for the locked CDC/AAP rule-based evaluation of the selected tooth sets. The primary generalisation evidence in the manuscript comes from the external temporal validation on NHANES 2013--2014.
 
 ### 4. SHAP sensitivity to collinearity
 
@@ -132,4 +133,3 @@ Periodontal measurements exhibit strong spatial correlation between neighbouring
 ### 5. Data availability and generalisability
 
 The study is constrained by the limited availability of large-scale periodontal datasets with tooth-level PD and CAL measurements. Subgroup analyses (e.g., by age and sex) are subject to sample size and reduced statistical power, which may affect the stability of CDC/AAP classification and agreement metrics within strata.
-

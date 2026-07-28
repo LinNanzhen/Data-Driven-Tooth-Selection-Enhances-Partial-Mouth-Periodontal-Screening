@@ -17,7 +17,6 @@ from core.model_factory import create_model
 
 try:
     import shap
-
     SHAP_AVAILABLE = True
 except Exception:
     SHAP_AVAILABLE = False

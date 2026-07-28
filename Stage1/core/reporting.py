@@ -23,14 +23,10 @@ def export_results(run_result: RunResult, output_dir: Path, output_spec: OutputS
 
     std_paths = {
         "metrics_cv.csv": output_dir / output_spec.metrics_cv,
-        "metrics_test.csv": output_dir / output_spec.metrics_test,
-        "comparison_cv_test.csv": output_dir / output_spec.comparison_cv_test,
         "summary_final.csv": output_dir / output_spec.summary_final,
     }
 
     _safe_to_csv(run_result.cv_results, std_paths["metrics_cv.csv"])
-    _safe_to_csv(run_result.test_results, std_paths["metrics_test.csv"])
-    _safe_to_csv(run_result.comparison, std_paths["comparison_cv_test.csv"])
     _safe_to_csv(run_result.summary, std_paths["summary_final.csv"])
 
     if not keep_legacy:

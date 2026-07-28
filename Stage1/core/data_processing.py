@@ -30,13 +30,6 @@ class DataProcessor:
         missing_cols = [col for col in required_cols if col not in df.columns]
         if missing_cols:
             print("Warning: missing required columns: {0}".format(missing_cols))
-            for col in missing_cols:
-                if col == self.config.weight_column:
-                    df[col] = 1.0
-                elif col == self.config.age_column:
-                    df[col] = 40
-                elif col == self.config.gender_column:
-                    df[col] = 1
 
         print("Initial sample size: {0}".format(len(df)))
         df = df[df[self.config.age_column] >= self.config.min_age].copy()
@@ -72,8 +65,8 @@ class DataProcessor:
         return df
 
     def _handle_missing_values(self, df):
-        for col in self.pd_columns + self.cal_columns:
-            df[col] = df[col].fillna(np.nan)
+        cols = self.pd_columns + self.cal_columns
+        df[cols] = df[cols].replace(99, np.nan)
         return df
 
     def _apply_cdc_classification(self, df):
@@ -86,7 +79,6 @@ class DataProcessor:
             return df
 
         df_imputed = df[impute_cols].copy()
-        df_imputed.replace(99, np.nan, inplace=True)
 
         tooth_prefixes = sorted({c[:5] for c in impute_cols})
         tooth_pd_cols = {tp: [] for tp in tooth_prefixes}
@@ -137,14 +129,14 @@ class DataProcessor:
         if not column_list:
             return pd.DataFrame(index=df.index)
 
-        data_for_agg = df[column_list].replace(99, np.nan)
+        data_for_agg = df[column_list]
         grouped_cols = defaultdict(list)
         for col in column_list:
             grouped_cols[col[:-1]].append(col)
 
         feature_series_list = []
         for prefix, columns in grouped_cols.items():
-            max_values = data_for_agg[columns].max(axis=1).fillna(np.nan)
+            max_values = data_for_agg[columns].max(axis=1)
             max_values.name = "{0}_max".format(prefix)
             feature_series_list.append(max_values)
 
