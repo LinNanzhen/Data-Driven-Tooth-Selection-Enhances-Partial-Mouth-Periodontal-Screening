@@ -92,24 +92,33 @@ This project uses public NHANES (National Health and Nutrition Examination Surve
 
 1. Download oral health examination data (OHX periodontal) and demographics from [NHANES](https://wwwn.cdc.gov/nchs/nhanes/).
 2. Stage 1 expects `Stage1/cleaned_data.csv`; Stage 2 expects `Stage2/test_data.csv`.
-3. Execute the subgroup code in Stage1 to obtain the required data for the internal test set
-## Usage
+3. Run Stage 1 to generate the holdout records used by internal Stage 2.
+
+## Reproduce the Stage 1 and Stage 2 analyses
+
+Run from the repository root with Python 3.12. On macOS, install the LightGBM OpenMP runtime with `brew install libomp` if needed. [LightGBM installation guide](https://lightgbm.readthedocs.io/en/stable/Installation-Guide.html#macos)
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+python -m pip install -r scripts/requirements-weighting.txt
+python scripts/reproduce_paper.py stage1
+python scripts/reproduce_paper.py stage2 --cohort both
 ```
 
-```python
-# Stage 1 -- run from Stage1/ directory
-from scenarios.overall import run
-result = run()
+Both commands run the overall, age or sex, and age-by-sex scenarios. Stage 1 exports tuning summaries, SHAP rankings, model metrics, plots and holdout records. Stage 2 applies the CDC/AAP rule and exports screening metrics, PSU bootstrap confidence intervals and pairwise comparisons for the published tooth sets. For internal evaluation, it reads the matching Stage 1 holdout for each group.
 
-# Stage 2 -- run from Stage2/ directory
-from scenarios.overall import run
-result = run()
+Use `--scenario overall`, `--scenario subgroup_single_factor` or `--scenario subgroup_age_gender` to run one scenario. Stage 2 defaults to the external cohort and accepts `--tooth-sets stage1` to evaluate the regenerated tooth sets. Run Stage 1 overall before evaluating regenerated sets for subgroups. Outputs are written to `data/processed/paper_published/`. The `--smoke` option writes a separate short run under `smoke/`. Internal subgroups below the existing Stage 2 minimum sample size are omitted.
+
+To rebuild the cohorts and export the pooled baseline characteristics from public NHANES files:
+
+```bash
+python scripts/download_nhanes.py
+python scripts/prepare_data.py
+python scripts/baseline_statistics.py
 ```
 
+Pass `--rebuilt-data` to both analysis commands to use these cohorts and write results to `data/processed/paper_rebuilt/`.
+
+With the distributed data and the default 8,000 bootstrap replicates, the overall external XGB10 run returns QWK 0.84537 and IF 127.294%. The pairwise IF comparison with CPI returns `P = 0.0035`. The article reports `P = 0.003`. [Published article](https://doi.org/10.1177/00220345261432570)
 
 ## Limitations
 
@@ -123,7 +132,7 @@ Stage 1 optimises macro-AUC (via Bayesian hyperparameter search), while Stage 2 
 
 ### 3. Internal test-set reuse
 
-The 20% hold-out split from NHANES 2009--2012 is used to report both ML predictive metrics (Stage 1) and CDC-rule metrics (Stage 2). Because the SHAP consensus teeth were derived from the full 2009--2012 cohort via repeated cross-validation, internal test-set performance should be interpreted as a consistency check, not a fully independent validation. The primary generalisation evidence in the manuscript comes from the external temporal validation on NHANES 2013--2014.
+The 20% hold-out split from NHANES 2009--2012 is used to report both ML predictive metrics (Stage 1) and CDC-rule metrics (Stage 2). The released Stage 1 code derives SHAP consensus teeth within the training split, and internal Stage 2 evaluates within the same NHANES cycles. The primary generalisation evidence in the manuscript comes from the external temporal validation on NHANES 2013--2014.
 
 ### 4. SHAP sensitivity to collinearity
 
