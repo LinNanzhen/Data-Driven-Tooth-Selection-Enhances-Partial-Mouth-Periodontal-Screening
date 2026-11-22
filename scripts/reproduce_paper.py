@@ -134,6 +134,9 @@ def main():
     output = OUT_DIR / ("paper_rebuilt" if args.rebuilt_data else "paper_published")
     if args.smoke:
         output /= "smoke"
+    if args.stage == "stage1":
+        for dependency in ("xgboost", "lightgbm", "skopt"):
+            import_module(dependency)
     sys.path.insert(0, str(ROOT / ("Stage1" if args.stage == "stage1" else "Stage2")))
     for name in SCENARIOS if args.scenario == "all" else (args.scenario,):
         module = import_module(f"scenarios.{name}")
