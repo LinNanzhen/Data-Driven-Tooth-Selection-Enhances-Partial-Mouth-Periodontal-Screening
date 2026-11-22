@@ -150,14 +150,19 @@ def main():
     if args.jobs < 1:
         parser.error("--jobs must be at least 1")
 
+    run(smoke=args.smoke, jobs=args.jobs)
+
+
+def run(*, smoke=False, jobs=4):
+    output_root = STAGE1_OUTPUT_DIR / "smoke" if smoke else STAGE1_OUTPUT_DIR
     features, labels, survey_weights = load_training_data()
-    folds = 2 if args.smoke else CV_FOLDS
-    iterations = 3 if args.smoke else SEARCH_ITERATIONS
-    output_dir = STAGE1_OUTPUT_DIR / ("training_smoke" if args.smoke else "training")
+    folds = 2 if smoke else CV_FOLDS
+    iterations = 3 if smoke else SEARCH_ITERATIONS
+    output_dir = output_root / "training"
     for name, balanced in (("nhanes_only", False), ("nhanes_balanced", True)):
         train_weighting_line(
             features, labels, survey_weights, output_dir / name,
-            folds=folds, iterations=iterations, jobs=args.jobs, smoke=args.smoke, balanced=balanced,
+            folds=folds, iterations=iterations, jobs=jobs, smoke=smoke, balanced=balanced,
         )
 
 

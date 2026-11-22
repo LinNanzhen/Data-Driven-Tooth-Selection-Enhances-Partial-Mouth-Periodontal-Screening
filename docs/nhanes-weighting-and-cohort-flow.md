@@ -59,15 +59,9 @@ With 8,000 paired bootstrap draws resampling PSUs within strata, the 44-minus-41
 Run from the repository root. The reported analysis used Python 3.12, NumPy 2.5.5, pandas 3.1.1, SciPy 1.18.1, scikit-learn 1.9.1, scikit-optimize 0.10.2, XGBoost 3.4.1, LightGBM 4.7.0 and SHAP 0.54.1.
 
 ```bash
-python -m pip install -r scripts/requirements-weighting.txt
-python scripts/download_nhanes.py
-python scripts/prepare_data.py
-python scripts/stage1_data.py
-python scripts/stage1_train.py
-python scripts/stage1_shap.py
-python scripts/stage1_evaluate.py
-python scripts/stage2_point_evaluate.py
-python scripts/stage2_paired_bootstrap.py
+python -m pip install -r requirements.txt
+python scripts/reproduce_paper.py prepare
+python scripts/reproduce_paper.py sensitivity
 ```
 
 The cohort ledger is written to `data/processed/inclusion_flow.csv`. Outputs under `data/processed/stage1/` include tuning summaries, SHAP rankings, the internal model metrics, fixed-tooth screening metrics and the external paired bootstrap results. The analysis uses the repository's existing Stage 2 code and keeps the published protocols as references.

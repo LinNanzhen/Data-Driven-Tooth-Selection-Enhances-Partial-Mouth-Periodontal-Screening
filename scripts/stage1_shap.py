@@ -128,8 +128,13 @@ def main():
     if args.jobs < 1:
         parser.error("--jobs must be at least 1")
 
-    training_dir = STAGE1_OUTPUT_DIR / ("training_smoke" if args.smoke else "training")
-    output_dir = STAGE1_OUTPUT_DIR / ("shap_smoke" if args.smoke else "shap")
+    run(smoke=args.smoke, jobs=args.jobs)
+
+
+def run(*, smoke=False, jobs=4):
+    output_root = STAGE1_OUTPUT_DIR / "smoke" if smoke else STAGE1_OUTPUT_DIR
+    training_dir = output_root / "training"
+    output_dir = output_root / "shap"
     features, labels, weights = load_training_data()
     if not (features.index.equals(labels.index) and labels.index.equals(weights.index)):
         raise ValueError("Feature, label and survey weight participant indices differ")
@@ -139,7 +144,7 @@ def main():
     if len(teeth) != 56 or len(set(teeth)) != 28 or not pd.Series(teeth).value_counts().eq(2).all():
         raise ValueError("Expected exactly two features for each of the 28 teeth")
 
-    seeds, folds = ((42,), 2) if args.smoke else (SEEDS, CV_FOLDS)
+    seeds, folds = ((42,), 2) if smoke else (SEEDS, CV_FOLDS)
     splits = [
         (seed, fold, train)
         for seed in seeds
@@ -159,7 +164,7 @@ def main():
             best_params[weighting][name] = params
             model.set_params(**params)
             print(f"{weighting}/{name}: calculating SHAP for {len(splits)} folds", flush=True)
-            results = Parallel(n_jobs=args.jobs, prefer="threads")(
+            results = Parallel(n_jobs=jobs, prefer="threads")(
                 delayed(explain_fold)(
                     model, name, weighting, features.iloc[train], labels.iloc[train], weights.iloc[train], seed, fold,
                     include_equal_classes=True,

@@ -30,7 +30,8 @@ def weighted_metrics(model, features, labels, weights):
     }
 
 
-def main():
+def main(*, smoke=False):
+    output_root = STAGE1_OUTPUT_DIR / "smoke" if smoke else STAGE1_OUTPUT_DIR
     x_train, y_train, w_train = load_training_data()
     cohort, features = prepare_stage1_data()
     cohort = cohort.set_index("SEQN")
@@ -43,7 +44,7 @@ def main():
     y_test = cohort.loc[test_ids, TARGET_COLUMN]
     w_test = cohort.loc[test_ids, "WTMEC2YR"]
 
-    shap_dir = STAGE1_OUTPUT_DIR / "shap"
+    shap_dir = output_root / "shap"
     shap_summary = json.loads((shap_dir / "summary.json").read_text())
     aggregation = shap_summary["primary_aggregation"]
     top10 = pd.read_csv(shap_dir / "top10.csv", dtype={"tooth_fdi": str})
@@ -53,7 +54,7 @@ def main():
     rows = []
     for line in ("nhanes_only", "nhanes_balanced"):
         fit_weights = balance_survey_weights(y_train, w_train) if line == "nhanes_balanced" else w_train
-        training_dir = STAGE1_OUTPUT_DIR / "training" / line
+        training_dir = output_root / "training" / line
         tuning = json.loads((training_dir / "summary.json").read_text())
         for name, (reduced_model, _) in overall_models_and_spaces().items():
             params = tuning["models"][name]["best_params"]
@@ -79,7 +80,7 @@ def main():
                     **weighted_metrics(model, test_features, y_test, w_test),
                 })
 
-    output_dir = STAGE1_OUTPUT_DIR / "evaluation"
+    output_dir = output_root / "evaluation"
     output_dir.mkdir(parents=True, exist_ok=True)
     results = pd.DataFrame(rows)
     results.to_csv(output_dir / "internal_test_metrics.csv", index=False)
