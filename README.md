@@ -133,3 +133,7 @@ Periodontal measurements exhibit strong spatial correlation between neighbouring
 
 The study is constrained by the limited availability of large-scale periodontal datasets with tooth-level PD and CAL measurements. Subgroup analyses (e.g., by age and sex) are subject to sample size and reduced statistical power, which may affect the stability of CDC/AAP classification and agreement metrics within strata.
 
+
+## Supplementary analysis
+
+See the [NHANES weighting sensitivity and participant flow](docs/nhanes-weighting-and-cohort-flow.md) for the overall-cohort weighting comparisons, external validation, and the zero-MEC-weight exclusion counts.
