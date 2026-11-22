@@ -15,11 +15,12 @@ from core.metrics import compute_screening_metrics, weighted_kappa_quadratic
 from scenarios.overall import build_config
 
 
-def main():
-    shap_dir = STAGE1_OUTPUT_DIR / "shap"
+def main(*, smoke=False):
+    output_root = STAGE1_OUTPUT_DIR / "smoke" if smoke else STAGE1_OUTPUT_DIR
+    shap_dir = output_root / "shap"
     summary = json.loads((shap_dir / "summary.json").read_text())
     top10 = pd.read_csv(shap_dir / "top10.csv", dtype={"tooth_fdi": str})
-    output_dir = STAGE1_OUTPUT_DIR / "evaluation"
+    output_dir = output_root / "evaluation"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     analyses = [(summary["primary_aggregation"], "fixed_tooth_screening_metrics.csv")]

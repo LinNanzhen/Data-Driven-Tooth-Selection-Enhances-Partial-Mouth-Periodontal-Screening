@@ -1,4 +1,4 @@
-"""Run the published Stage 1 and Stage 2 analyses."""
+"""Prepare data, reproduce the paper, or run the weighting sensitivity analysis."""
 
 import argparse
 from importlib import import_module
@@ -120,15 +120,39 @@ def run_stage2(module, name, data_dir, output, args):
         print(f"Stage 2 internal {name}: {config.output_dir}")
 
 
+def prepare():
+    for module in ("download_nhanes", "prepare_data", "baseline_statistics"):
+        import_module(module).main()
+
+
+def sensitivity(args):
+    import_module("stage1_data").main()
+    for module in ("stage1_train", "stage1_shap"):
+        import_module(module).run(smoke=args.smoke)
+    for module in ("stage1_evaluate", "stage2_point_evaluate", "stage2_paired_bootstrap"):
+        import_module(module).main(smoke=args.smoke)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("stage1", "stage2"))
-    parser.add_argument("--scenario", choices=("all", *SCENARIOS), default="all")
-    parser.add_argument("--rebuilt-data", action="store_true", help="Use CSVs from prepare_data.py.")
-    parser.add_argument("--smoke", action="store_true", help="Use short fits or 20 bootstrap replicates.")
-    parser.add_argument("--cohort", choices=("external", "internal", "both"), default="external")
-    parser.add_argument("--tooth-sets", choices=("published", "stage1"), default="published")
+    commands = parser.add_subparsers(dest="stage", required=True)
+    commands.add_parser("prepare", help="Download NHANES and rebuild the cohorts and baseline table.")
+    for name in ("stage1", "stage2", "sensitivity"):
+        command = commands.add_parser(name)
+        command.add_argument("--smoke", action="store_true", help="Use short fits or 20 bootstrap replicates.")
+        if name == "sensitivity":
+            continue
+        command.add_argument("--scenario", choices=("all", *SCENARIOS), default="all")
+        command.add_argument("--rebuilt-data", action="store_true", help="Use the CSVs from prepare.")
+        if name == "stage2":
+            command.add_argument("--cohort", choices=("external", "internal", "both"), default="external")
+            command.add_argument("--tooth-sets", choices=("published", "stage1"), default="published")
     args = parser.parse_args()
+
+    if args.stage == "prepare":
+        return prepare()
+    if args.stage == "sensitivity":
+        return sensitivity(args)
 
     data_dir = OUT_DIR if args.rebuilt_data else ROOT
     output = OUT_DIR / ("paper_rebuilt" if args.rebuilt_data else "paper_published")

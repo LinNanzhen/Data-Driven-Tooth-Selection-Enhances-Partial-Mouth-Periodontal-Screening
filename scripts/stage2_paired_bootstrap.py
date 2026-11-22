@@ -12,8 +12,9 @@ from stage2_point_evaluate import (
 from core.bootstrap import PSUBootstrapSampler
 
 
-def main():
-    shap_dir = STAGE1_OUTPUT_DIR / "shap"
+def main(*, smoke=False):
+    output_root = STAGE1_OUTPUT_DIR / "smoke" if smoke else STAGE1_OUTPUT_DIR
+    shap_dir = output_root / "shap"
     aggregation = json.loads((shap_dir / "summary.json").read_text())["primary_aggregation"]
     rankings = pd.read_csv(shap_dir / "top10.csv", dtype={"tooth_fdi": str})
     selected = rankings.loc[
@@ -25,6 +26,8 @@ def main():
         raise ValueError("Expected ten distinct teeth for NHANES-only XGBoost")
 
     config = build_config()
+    if smoke:
+        config.n_bootstrap = 20
     processor = DataProcessor(config)
     data = processor.load_and_preprocess(EXTERNAL_CSV)
     original = config.tooth_selection_strategies["XGB10"]
@@ -57,7 +60,7 @@ def main():
         "n": len(data), "bootstrap_replicates": config.n_bootstrap, "seed": config.random_seed,
         "nhanes_only_xgboost_fdi": " ".join(selected), "original_xgb10_fdi": " ".join(original),
     })
-    output = STAGE1_OUTPUT_DIR / "evaluation" / "external_paired_bootstrap.csv"
+    output = output_root / "evaluation" / "external_paired_bootstrap.csv"
     output.parent.mkdir(parents=True, exist_ok=True)
     results.to_csv(output, index=False)
     print(results.to_string(index=False))
